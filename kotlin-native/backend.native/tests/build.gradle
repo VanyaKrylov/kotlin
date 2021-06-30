@@ -4289,6 +4289,45 @@ interopTest("interop_cppSkia") {
     goldValue = "17 17\n"
 }
 
+/**
+ * Check that compiler properly reports linker options that aren't supported by LLD.
+ * @param withImportLibrary create an import library if true. Thus, LLD shoudn't complain.
+ */
+void driverCheckLldCompatibilityTest(boolean withImportLibrary) {
+    def taskSuffix = withImportLibrary ? "with" : "without"
+    tasks.register("driver_lld_${taskSuffix}_import_library", KonanDriverTest) {
+        source = "interop/mingw_dll_linkage/main.kt"
+
+        flags = ["-linker-option", "-lrary", "-linker-option", "-L", "-linker-option", "$buildDir/${taskSuffix}_import_library"]
+
+        compilerMessages = true
+        goldValue = "lld doesn't support linking directly against"
+        outputChecker = { out ->
+            withImportLibrary ? !out.contains(goldValue) : out.contains(goldValue)
+        }
+
+        doBeforeBuild {
+            mkdir("$buildDir/${taskSuffix}_import_library")
+            execClangForCompilerTests(project.target) {
+                args "$projectDir/interop/mingw_dll_linkage/library.c"
+                args '-shared', '-o', "$buildDir/${taskSuffix}_import_library/library.dll"
+                if (withImportLibrary) {
+                    args "-Wl,--out-implib", "-Wl,$buildDir/${taskSuffix}_import_library/library.dll.a"
+                }
+            }
+            copy {
+                from("$buildDir/library.dll")
+                into("$testOutputLocal/$name/$target/")
+            }
+        }
+    }
+}
+
+if (isWindowsTarget(project)) {
+    driverCheckLldCompatibilityTest(true)
+    driverCheckLldCompatibilityTest(false)
+}
+
 /*
 TODO: This test isn't run automatically
 task interop_echo_server(type: RunInteropKonanTest) {

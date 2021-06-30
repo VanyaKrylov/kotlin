@@ -297,6 +297,7 @@ class K2Native : CLICompiler<K2NativeCompilerArguments>() {
                     configuration.report(ERROR, "-Xgc-aggressive is only supported for -memory-model experimental")
                 }
                 put(GARBAGE_COLLECTOR_AGRESSIVE, arguments.gcAggressive)
+                put(CHECK_LLD_COMPATIBILITY, arguments.checkLldCompatibility)
             }
         }
     }
